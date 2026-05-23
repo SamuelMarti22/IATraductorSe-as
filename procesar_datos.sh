@@ -7,8 +7,6 @@
 cd "$(dirname "$0")"
 
 # Aplicar parche en mediapipe para que funcione en servidores sin GPU (como Lightning AI)
-# El archivo original solo captura ModuleNotFoundError, pero en este entorno
-# el error es ImportError — este parche lo agrega para que no crashee al iniciar
 MEDIAPIPE_PATCH=$(python3 -c "import mediapipe; import os; print(os.path.dirname(mediapipe.__file__))")/tasks/python/core/optional_dependencies.py
 sed -i 's/except ModuleNotFoundError:/except (ModuleNotFoundError, ImportError, Exception):/' "$MEDIAPIPE_PATCH"
 
