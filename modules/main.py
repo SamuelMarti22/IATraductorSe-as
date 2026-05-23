@@ -70,7 +70,6 @@ def main():
     recorrer_videos(pipeline, data_path, base / "dataset" / categoria if categoria else base / "dataset")
     pipeline.close()
 
-if __name__ == "__main__":
-    main()
+main()
 
     
