@@ -24,7 +24,7 @@ def split_dataset(dataset_folder, output_csv):
 
             etiqueta = seña.name
 
-            # Obtener todos los archivos .npy de esa seña
+            # Mezclar aleatoriamente para que el split no quede sesgado
             archivos = sorted(seña.glob("*.npy"))
             random.shuffle(archivos)
 
@@ -32,7 +32,7 @@ def split_dataset(dataset_folder, output_csv):
             n_train = int(total * TRAIN)
             n_val   = int(total * VAL)
 
-            # Dividir en los tres grupos
+            # Dividir en los tres grupos según las proporciones definidas arriba
             train_files = archivos[:n_train]
             val_files   = archivos[n_train:n_train + n_val]
             test_files  = archivos[n_train + n_val:]
@@ -46,7 +46,7 @@ def split_dataset(dataset_folder, output_csv):
             for archivo in test_files:
                 filas.append([str(archivo), etiqueta, "test"])
 
-    # Guardar CSV
+    # Guardar CSV con columnas: archivo, etiqueta, split
     with open(output_csv, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["archivo", "etiqueta", "split"])

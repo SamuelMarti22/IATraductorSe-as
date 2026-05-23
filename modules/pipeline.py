@@ -2,9 +2,13 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from pathlib import Path
+# Se importa la API nueva de MediaPipe (Tasks API) ya que muestra un mejor funcionamiento en este tipo de servidores
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
+# Ruta al modelo de detección de manos que usa MediaPipe Tasks API
+# El modelo viene en un archivo separado (.task) 
+# Path(__file__) obtiene la ruta de este archivo sin importar desde dónde se corra
 MODEL_PATH = str(Path(__file__).parent.parent / "test_model" / "hand_landmarker.task")
 
 
@@ -15,6 +19,8 @@ class HandPipeline:
                  detection_confidence=0.5,
                  tracking_confidence=0.5):
 
+        # Configurar las opciones del detector con la API (Tasks API)
+        # Se carga el modelo desde el archivo .task
         base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
 
         options = vision.HandLandmarkerOptions(
@@ -24,6 +30,7 @@ class HandPipeline:
             min_tracking_confidence=tracking_confidence
         )
 
+        # Crear el detector de manos con las opciones configuradas
         self.hands = vision.HandLandmarker.create_from_options(options)
 
     # Procesar un solo frame y generar vector de landmarks para ambas manos
@@ -32,11 +39,14 @@ class HandPipeline:
         # Convertir a RGB (MediaPipe requiere RGB)
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Procesar con MediaPipe
+        # Convertir la imagen al formato que espera la API nueva de MediaPipe
+        # Se envuelve en un objeto mp.Image antes de detectar
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
         results = self.hands.detect(mp_image)
 
         # Inicializar vectores para ambas manos en 0
+        # Si una mano no se detecta en el frame, su vector queda en ceros
+        # Cada mano tiene 21 landmarks × 3 coordenadas (x, y, z) = 63 valores
         left_hand = np.zeros(63, dtype=np.float32)
         right_hand = np.zeros(63, dtype=np.float32)
 
@@ -48,12 +58,14 @@ class HandPipeline:
                     results.hand_landmarks,
                     results.handedness):
 
-                # Left / Right
+                # Identificar si es mano izquierda o derecha
+                # Se lee:  handedness[0].category_name
                 label = handedness[0].category_name
 
                 hand_vector = []
 
-                # recorrer landmarks
+                # recorrer landmarks (21 puntos de la mano)
+                # Cada landmark tiene coordenadas x, y, z
                 for landmark in hand_landmarks:
 
                     hand_vector.extend([
@@ -82,14 +94,15 @@ class HandPipeline:
     # Procesar video completo y generar secuencia de vectores
     def process_video(self, video_path):
 
-        #Abre el video
-        cap = cv2.VideoCapture(video_path)
+        # Abre el video con OpenCV — cv2.VideoCapture permite leer frame por frame
+        cap = cv2.VideoCapture(str(video_path))
 
         sequence = []
 
         while cap.isOpened():
 
             # Tomar un frame del video
+            # cap.read() avanza un frame y devuelve la imagen de ese momento
             success, frame = cap.read()
 
             if not success:
@@ -102,9 +115,12 @@ class HandPipeline:
 
         cap.release()
 
+        # Retorna array de forma (num_frames, 126)
+        # Cada fila es un frame, cada columna es un valor de landmark
         return np.array(sequence, dtype=np.float32)
 
     # Guardar secuencia de vectores en un archivo .npy
+    # Se usa .npy en lugar de .txt porque es más rápido de leer y ocupa menos espacio
     def save_sequence(self, sequence, output_path):
 
         np.save(output_path, sequence)

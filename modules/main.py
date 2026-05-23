@@ -2,7 +2,7 @@ import os
 import cv2
 import sys
 from pathlib import Path
-from pipeline import HandPipeline
+from pipeline import HandPipeline 
 
 def recorrer_videos(pipeline, data_folder, output_path):
     """
@@ -47,9 +47,9 @@ def recorrer_videos(pipeline, data_folder, output_path):
 
                 print(sequence.shape)
 
-                # Construir ruta de salida: dataset/Courtesy/hola/hola_001.npy
+                # Construir ruta única por video: dataset/Courtesy/hola/hola_001.npy
                 save_path = Path(output_path) / categoria.name / subcategoria.name / video_file.stem
-                save_path.parent.mkdir(parents=True, exist_ok=True)
+                save_path.parent.mkdir(parents=True, exist_ok=True)  # crear carpetas si no existen
 
                 pipeline.save_sequence(sequence, save_path)
 
@@ -62,13 +62,11 @@ def recorrer_videos(pipeline, data_folder, output_path):
     return videos_procesados
 
 def main():
-    base = Path(__file__).parent.parent
-    # Si se pasa una categoría como argumento solo procesa esa, si no procesa todas
-    categoria = sys.argv[1] if len(sys.argv) > 1 else None
-    data_path = base / "data" / categoria if categoria else base / "data"
+    base = Path(__file__).parent.parent  # raíz del proyecto
     pipeline = HandPipeline()
-    recorrer_videos(pipeline, data_path, base / "dataset" / categoria if categoria else base / "dataset")
-    pipeline.close()
+    recorrer_videos(pipeline, base / "data", base / "dataset")
+    pipeline.close() 
+
 
 main()
 
