@@ -1,6 +1,11 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+from pathlib import Path
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
+MODEL_PATH = str(Path(__file__).parent.parent / "test_model" / "hand_landmarker.task")
 
 
 class HandPipeline:
@@ -10,14 +15,16 @@ class HandPipeline:
                  detection_confidence=0.5,
                  tracking_confidence=0.5):
 
-        self.mp_hands = mp.solutions.hands
+        base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
 
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=max_num_hands,
-            min_detection_confidence=detection_confidence,
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            num_hands=max_num_hands,
+            min_hand_detection_confidence=detection_confidence,
             min_tracking_confidence=tracking_confidence
         )
+
+        self.hands = vision.HandLandmarker.create_from_options(options)
 
     # Procesar un solo frame y generar vector de landmarks para ambas manos
     def process_frame(self, frame):
@@ -26,27 +33,28 @@ class HandPipeline:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # Procesar con MediaPipe
-        results = self.hands.process(rgb)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        results = self.hands.detect(mp_image)
 
-        # Inicializar vectores para ambas manos en 0 
+        # Inicializar vectores para ambas manos en 0
         left_hand = np.zeros(63, dtype=np.float32)
         right_hand = np.zeros(63, dtype=np.float32)
 
         # Si detecta alguna mano, procesar landmarks
-        if results.multi_hand_landmarks and results.multi_handedness:
+        if results.hand_landmarks and results.handedness:
 
             # recorrer manos detectadas
             for hand_landmarks, handedness in zip(
-                    results.multi_hand_landmarks,
-                    results.multi_handedness):
+                    results.hand_landmarks,
+                    results.handedness):
 
                 # Left / Right
-                label = handedness.classification[0].label
+                label = handedness[0].category_name
 
                 hand_vector = []
 
                 # recorrer landmarks
-                for landmark in hand_landmarks.landmark:
+                for landmark in hand_landmarks:
 
                     hand_vector.extend([
                         landmark.x,
@@ -74,6 +82,7 @@ class HandPipeline:
     # Procesar video completo y generar secuencia de vectores
     def process_video(self, video_path):
 
+        #Abre el video
         cap = cv2.VideoCapture(video_path)
 
         sequence = []
