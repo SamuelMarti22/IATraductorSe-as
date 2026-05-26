@@ -7,14 +7,19 @@ TRAIN = 0.70
 VAL   = 0.15
 TEST  = 0.15
 
-def split_dataset(dataset_folder, output_csv):
-
+def split_dataset(dataset_folder, output_csv, categorias=None):
+    """
+    categorias: lista de nombres de carpetas a incluir, ej. ["Courtesy"]
+                Si es None, incluye todas.
+    """
     dataset_path = Path(dataset_folder)
     filas = []
 
     # Recorrer categorías (Colors, Courtesy, Numbers)
     for categoria in sorted(dataset_path.iterdir()):
         if not categoria.is_dir():
+            continue
+        if categorias is not None and categoria.name not in categorias:
             continue
 
         # Recorrer señas (hola, gracias, etc.)
@@ -58,6 +63,6 @@ def split_dataset(dataset_folder, output_csv):
 
 def main():
     base = Path(__file__).parent.parent
-    split_dataset(base / "dataset", base / "dataset" / "split.csv")
+    split_dataset(base / "dataset", base / "dataset" / "split.csv", categorias=["Courtesy"])
 
 main()
