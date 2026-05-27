@@ -14,33 +14,33 @@ verde
 apoyar
 ayudar
 baño
-bien
-bienvenido
-buenas noches
-buenas tardes
-buenos dias
-chao
-como esta
-con gusto
-denada
-esperar
-excelente
-gracias
-hola
-invitar
-lo siento
-mal
-maso menos
-muchas gracias
-muy bien
+bien * 
+bienvenido *
+buenas noches *
+buenas tardes *
+buenos dias *
+chao * 
+como esta *
+con gusto *
+denada 
+esperar 
+excelente 
+gracias *
+hola *
+invitar 
+lo siento 
+mal *
+maso menos *
+muchas gracias 
+muy bien 
 muy mal
-necesitar
-no
-perdon
-perfecto
-permiso
-por favor
-presentar
+necesitar 
+no 
+perdon *
+perfecto 
+permiso * 
+por favor *
+presentar 
 sentarse
 si
 tranquilo

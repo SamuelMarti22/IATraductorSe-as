@@ -8,9 +8,9 @@ from model import SignLSTM
 BATCH_SIZE  = 32
 EPOCHS      = 100
 LR          = 1e-3
-HIDDEN_SIZE = 256
+HIDDEN_SIZE = 384
 NUM_LAYERS  = 2
-DROPOUT     = 0.5
+DROPOUT     = 0.3
 
 
 def train_epoch(model, loader, criterion, optimizer, device):

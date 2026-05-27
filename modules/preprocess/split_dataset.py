@@ -62,7 +62,7 @@ def split_dataset(dataset_folder, output_csv, categorias=None):
 
 
 def main():
-    base = Path(__file__).parent.parent
+    base = Path(__file__).parent.parent.parent
     split_dataset(base / "dataset", base / "dataset" / "split.csv", categorias=["Courtesy"])
 
 main()

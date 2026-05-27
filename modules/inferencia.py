@@ -14,9 +14,9 @@ os.environ["__EGL_VENDOR_LIBRARY_FILENAMES"] = ""
 os.environ["EGL_PLATFORM"] = "surfaceless"
 
 sys.path.insert(0, str(Path(__file__).parent))
-from pipeline import HandPipeline
+from preprocess.pipeline import HandPipeline
 from model import SignLSTM
-from dataloader import normalizar_landmarks
+from preprocess.pipeline importnormalizar_landmarks
 
 
 base = Path(__file__).parent.parent
