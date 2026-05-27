@@ -9,7 +9,7 @@ from mediapipe.tasks.python import vision
 # Ruta al modelo de detección de manos que usa MediaPipe Tasks API
 # El modelo viene en un archivo separado (.task) 
 # Path(__file__) obtiene la ruta de este archivo sin importar desde dónde se corra
-MODEL_PATH = str(Path(__file__).parent.parent / "test_model" / "hand_landmarker.task")
+MODEL_PATH = str(Path(__file__).parent.parent.parent / "test_model" / "hand_landmarker.task")
 
 
 class HandPipeline:
@@ -32,6 +32,29 @@ class HandPipeline:
 
         # Crear el detector de manos con las opciones configuradas
         self.hands = vision.HandLandmarker.create_from_options(options)
+
+    def normalizar_landmarks(self, secuencia):
+        # 1. Resta la muñeca (posición) → gesto centrado sin importar dónde esté la mano
+        # 2. Divide por tamaño de mano (escala) → gesto invariante a distancia de la cámara
+        T = secuencia.shape[0]
+
+        for inicio in [0, 63]:
+            hand = secuencia[:, inicio:inicio + 63].reshape(T, 21, 3)
+            wrist = hand[:, 0:1, :]
+            detectada = (np.abs(wrist).sum(axis=2, keepdims=True) > 0)  # (T, 1, 1)
+
+            # Centrar en la muñeca
+            hand = hand - wrist * detectada
+
+            # Normalizar escala: distancia muñeca → base del dedo medio (landmark 9)
+            escala = np.linalg.norm(hand[:, 9:10, :], axis=2, keepdims=True)
+            escala = np.clip(escala, 1e-6, None)
+            hand = np.where(detectada, hand / escala, hand)
+
+            secuencia[:, inicio:inicio + 63] = hand.reshape(T, 63)
+
+        return secuencia
+
 
     # Procesar un solo frame y generar vector de landmarks para ambas manos
     def process_frame(self, frame):
@@ -117,7 +140,9 @@ class HandPipeline:
 
         # Retorna array de forma (num_frames, 126)
         # Cada fila es un frame, cada columna es un valor de landmark
-        return np.array(sequence, dtype=np.float32)
+        sequence = np.array(sequence, dtype=np.float32)
+        sequence = self.normalizar_landmarks(sequence)
+        return sequence
 
     # Guardar secuencia de vectores en un archivo .npy
     # Se usa .npy en lugar de .txt porque es más rápido de leer y ocupa menos espacio

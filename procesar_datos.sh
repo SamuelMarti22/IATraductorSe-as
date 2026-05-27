@@ -15,10 +15,10 @@ echo "Iniciando procesamiento de videos..."
 # Detectar si estamos en un servidor sin pantalla (como Lightning AI)
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
     echo "Entorno sin pantalla detectado (servidor). Usando modo CPU."
-    __EGL_VENDOR_LIBRARY_FILENAMES='' EGL_PLATFORM=surfaceless python3 modules/main.py
+    __EGL_VENDOR_LIBRARY_FILENAMES='' EGL_PLATFORM=surfaceless python3 modules/preprocess/preprocess.py
 else
     echo "Entorno con pantalla detectado. Corriendo normal."
-    python3 modules/main.py
+    python3 modules/preprocess/preprocess.py
 fi
 
 echo "Procesamiento terminado."

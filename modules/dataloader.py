@@ -4,29 +4,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
 
-
-def normalizar_landmarks(secuencia):
-    # 1. Resta la muñeca (posición) → gesto centrado sin importar dónde esté la mano
-    # 2. Divide por tamaño de mano (escala) → gesto invariante a distancia de la cámara
-    T = secuencia.shape[0]
-
-    for inicio in [0, 63]:
-        hand     = secuencia[:, inicio:inicio+63].reshape(T, 21, 3)
-        wrist    = hand[:, 0:1, :]
-        detectada = (wrist.abs().sum(dim=2, keepdim=True) > 0)  # (T, 1, 1)
-
-        # Centrar en la muñeca
-        hand = hand - wrist * detectada
-
-        # Normalizar escala: distancia muñeca → base del dedo medio (landmark 9)
-        escala = hand[:, 9:10, :].norm(dim=2, keepdim=True).clamp(min=1e-6)
-        hand   = torch.where(detectada, hand / escala, hand)
-
-        secuencia[:, inicio:inicio+63] = hand.reshape(T, 63)
-
-    return secuencia
-
-
 # SignDataset es la clase que lee el CSV y carga los archivos .npy uno a uno
 class SignDataset(Dataset):
 
@@ -52,12 +29,9 @@ class SignDataset(Dataset):
     def __getitem__(self, idx):
         archivo, etiqueta = self.muestras[idx]
 
-        # Cargar secuencia de landmarks y convertir a tensor de PyTorch
+        # Cargar secuencia de landmarks ya normalizada y convertirla a tensor de PyTorch
         secuencia = np.load(archivo)
         secuencia = torch.tensor(secuencia, dtype=torch.float32)
-
-        # Normalizar landmarks relativo a la muñeca de cada mano
-        secuencia = normalizar_landmarks(secuencia)
 
         # El modelo necesita números, no texto — se convierte la etiqueta a su índice
         label = torch.tensor(self.label_to_idx[etiqueta], dtype=torch.long)

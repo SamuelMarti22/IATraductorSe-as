@@ -67,7 +67,7 @@ def recorrer_videos(pipeline, data_folder, output_path):
     return videos_procesados
 
 def main():
-    base = Path(__file__).parent.parent  # raíz del proyecto
+    base = Path(__file__).parent.parent.parent  # raíz del proyecto
     pipeline = HandPipeline()
     recorrer_videos(pipeline, base / "data", base / "dataset")
     pipeline.close()
