@@ -6,23 +6,23 @@ from pathlib import Path
 
 
 def normalizar_landmarks(secuencia):
-    # Resta la posición de la muñeca a cada landmark de esa mano
-    # Así el gesto queda centrado en la muñeca sin importar dónde esté la mano en pantalla
+    # 1. Resta la muñeca (posición) → gesto centrado sin importar dónde esté la mano
+    # 2. Divide por tamaño de mano (escala) → gesto invariante a distancia de la cámara
     T = secuencia.shape[0]
 
-    # Mano izquierda: índices 0-62, muñeca en [0:3]
-    left = secuencia[:, 0:63].reshape(T, 21, 3)
-    left_wrist = left[:, 0:1, :]
-    detectada = (left_wrist.abs().sum(dim=2, keepdim=True) > 0)
-    left = left - left_wrist * detectada
-    secuencia[:, 0:63] = left.reshape(T, 63)
+    for inicio in [0, 63]:
+        hand     = secuencia[:, inicio:inicio+63].reshape(T, 21, 3)
+        wrist    = hand[:, 0:1, :]
+        detectada = (wrist.abs().sum(dim=2, keepdim=True) > 0)  # (T, 1, 1)
 
-    # Mano derecha: índices 63-125, muñeca en [63:66]
-    right = secuencia[:, 63:126].reshape(T, 21, 3)
-    right_wrist = right[:, 0:1, :]
-    detectada = (right_wrist.abs().sum(dim=2, keepdim=True) > 0)
-    right = right - right_wrist * detectada
-    secuencia[:, 63:126] = right.reshape(T, 63)
+        # Centrar en la muñeca
+        hand = hand - wrist * detectada
+
+        # Normalizar escala: distancia muñeca → base del dedo medio (landmark 9)
+        escala = hand[:, 9:10, :].norm(dim=2, keepdim=True).clamp(min=1e-6)
+        hand   = torch.where(detectada, hand / escala, hand)
+
+        secuencia[:, inicio:inicio+63] = hand.reshape(T, 63)
 
     return secuencia
 

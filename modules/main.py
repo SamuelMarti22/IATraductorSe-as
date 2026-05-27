@@ -2,7 +2,10 @@ import os
 import cv2
 import sys
 from pathlib import Path
-from pipeline import HandPipeline 
+from pipeline import HandPipeline
+
+# Categorías a procesar. Cambiar a None para procesar todas.
+CATEGORIAS = ["Courtesy"]
 
 def recorrer_videos(pipeline, data_folder, output_path):
     """
@@ -23,6 +26,8 @@ def recorrer_videos(pipeline, data_folder, output_path):
     # Recorrer categorías principales (Colors, Courtesy, Numbers)
     for categoria in sorted(data_path.iterdir()):
         if not categoria.is_dir() or categoria.name == '__pycache__':
+            continue
+        if CATEGORIAS is not None and categoria.name not in CATEGORIAS:
             continue
             
         print(f"\n{'='*60}")
@@ -65,7 +70,7 @@ def main():
     base = Path(__file__).parent.parent  # raíz del proyecto
     pipeline = HandPipeline()
     recorrer_videos(pipeline, base / "data", base / "dataset")
-    pipeline.close() 
+    pipeline.close()
 
 
 main()
