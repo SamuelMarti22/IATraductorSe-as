@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <title>Traductor de Señas</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #0f0f0f;
+            color: white;
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            padding: 20px;
+        }
+
+        .container {
+
+            width: 100%;
+            max-width: 700px;
+
+            background: #1b1b1b;
+
+            padding: 30px;
+
+            border-radius: 24px;
+
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #b3b3b3;
+            margin-bottom: 25px;
+        }
+
+        video {
+
+            width: 100%;
+
+            border-radius: 20px;
+
+            background: black;
+
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+
+            display: flex;
+            gap: 12px;
+
+            margin-bottom: 20px;
+        }
+
+        button {
+
+            flex: 1;
+
+            border: none;
+
+            padding: 14px;
+
+            border-radius: 16px;
+
+            font-size: 1rem;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        #startBtn {
+            background: #2563eb;
+            color: white;
+        }
+
+        #startBtn:hover {
+            background: #1d4ed8;
+        }
+
+        #stopBtn {
+            background: #dc2626;
+            color: white;
+        }
+
+        #stopBtn:hover {
+            background: #b91c1c;
+        }
+
+        .resultado {
+
+            background: #111;
+
+            padding: 20px;
+
+            border-radius: 20px;
+
+            min-height: 120px;
+        }
+
+        .resultado h2 {
+            margin-bottom: 10px;
+        }
+
+        #status {
+            color: #22c55e;
+            margin-bottom: 10px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Traductor de Señas</h1>
+
+        <p>
+            Haz una seña corta frente a la cámara y presiona detener.
+        </p>
+
+        <video id="video" autoplay muted playsinline></video>
+
+        <div class="buttons">
+
+            <button id="startBtn">
+                Iniciar grabación
+            </button>
+
+            <button id="stopBtn">
+                Detener y traducir
+            </button>
+
+        </div>
+
+        <div class="resultado">
+
+            <div id="status">
+                Esperando grabación...
+            </div>
+
+            <h2 id="prediccion">
+                —
+            </h2>
+
+            <div id="confianza">
+                —
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        const video = document.getElementById("video");
+
+        const startBtn = document.getElementById("startBtn");
+
+        const stopBtn = document.getElementById("stopBtn");
+
+        const statusText = document.getElementById("status");
+
+        const prediccionText = document.getElementById("prediccion");
+
+        const confianzaText = document.getElementById("confianza");
+
+        let mediaRecorder;
+
+        let recordedChunks = [];
+
+        // =====================================================
+        // Iniciar webcam
+        // =====================================================
+
+        async function iniciarCamara() {
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false
+            });
+
+            video.srcObject = stream;
+
+            window.stream = stream;
+        }
+
+        iniciarCamara();
+
+        // =====================================================
+        // Iniciar grabación
+        // =====================================================
+
+        startBtn.onclick = () => {
+
+            recordedChunks = [];
+
+            mediaRecorder = new MediaRecorder(
+                window.stream,
+                {
+                    mimeType: "video/webm"
+                }
+            );
+
+            mediaRecorder.ondataavailable = (event) => {
+
+                if (event.data.size > 0) {
+
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.start();
+
+            statusText.innerText = "Grabando...";
+        };
+
+        // =====================================================
+        // Detener grabación
+        // =====================================================
+
+        stopBtn.onclick = async () => {
+
+            if (!mediaRecorder) return;
+
+            mediaRecorder.stop();
+
+            statusText.innerText = "Procesando...";
+
+            mediaRecorder.onstop = async () => {
+
+                const blob = new Blob(
+                    recordedChunks,
+                    {
+                        type: "video/webm"
+                    }
+                );
+
+                const formData = new FormData();
+
+                formData.append(
+                    "video",
+                    blob,
+                    "sena.webm"
+                );
+
+                try {
+
+                    const response = await fetch(
+                        "https://8000-01kfea1zv0fh756z8ef3ah14fd.cloudspaces.litng.ai/predict",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    prediccionText.innerText =
+                        data.prediccion;
+
+                    confianzaText.innerText =
+                        `Confianza: ${Math.round(data.confianza * 100)}%`;
+
+                    statusText.innerText =
+                        "Predicción lista";
+
+                }
+
+                catch (error) {
+
+                    console.error(error);
+
+                    statusText.innerText =
+                        "Error procesando video";
+                }
+            };
+        };
+
+    </script>
+
+</body>
+</html>

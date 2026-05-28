@@ -1,13 +1,17 @@
 import os
 import sys
 import csv
+import tempfile
+
 from pathlib import Path
 
 import cv2
 import torch
 import numpy as np
 import mediapipe as mp
-import gradio as gr
+
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 
 # =========================================================
 # Configuración MediaPipe
@@ -26,19 +30,37 @@ from preprocess.pipeline import HandPipeline
 from model import SignLSTM
 
 # =========================================================
+# FastAPI
+# =========================================================
+
+app = FastAPI()
+
+# =========================================================
+# CORS
+# =========================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =========================================================
 # Base path
 # =========================================================
 
 base = Path(__file__).parent.parent
 
 # =========================================================
-# Pipeline MediaPipe
+# Pipeline
 # =========================================================
 
 pipeline = HandPipeline()
 
 # =========================================================
-# Cargar etiquetas
+# Etiquetas
 # =========================================================
 
 def cargar_etiquetas(csv_path):
@@ -176,13 +198,10 @@ def inferir_secuencia(secuencia):
     return prediccion, confianza
 
 # =========================================================
-# Procesar video completo
+# Procesar video
 # =========================================================
 
 def procesar_video(video_path):
-
-    if video_path is None:
-        return "No se recibió video."
 
     cap = cv2.VideoCapture(video_path)
 
@@ -200,18 +219,10 @@ def procesar_video(video_path):
 
         total_frames += 1
 
-        # ================================================
-        # Resize para acelerar procesamiento
-        # ================================================
-
         frame = cv2.resize(
             frame,
-            (640, 480)
+            (320, 240)
         )
-
-        # ================================================
-        # MediaPipe
-        # ================================================
 
         rgb = cv2.cvtColor(
             frame,
@@ -227,16 +238,8 @@ def procesar_video(video_path):
             mp_image
         )
 
-        # ================================================
-        # Contar frames con mano
-        # ================================================
-
         if results.hand_landmarks:
             frames_con_mano += 1
-
-        # ================================================
-        # Extraer landmarks
-        # ================================================
 
         landmarks_vector = extraer_landmarks(
             results
@@ -248,91 +251,55 @@ def procesar_video(video_path):
 
     cap.release()
 
-    # =====================================================
-    # Validación
-    # =====================================================
-
     if len(secuencia) == 0:
 
-        return "No se encontraron frames."
+        return {
+            "prediccion": "Sin frames",
+            "confianza": 0
+        }
 
     if frames_con_mano == 0:
 
-        return "No se detectaron manos."
-
-    # =====================================================
-    # Inferencia
-    # =====================================================
+        return {
+            "prediccion": "No se detectaron manos",
+            "confianza": 0
+        }
 
     prediccion, confianza = inferir_secuencia(
         secuencia
     )
 
-    # =====================================================
-    # Resultado
-    # =====================================================
+    return {
+        "prediccion": prediccion,
+        "confianza": confianza,
+        "frames_totales": total_frames,
+        "frames_con_mano": frames_con_mano
+    }
 
-    resultado = f"""
-# Predicción
+# =========================================================
+# Endpoint
+# =========================================================
 
-## {prediccion}
+@app.post("/predict")
+async def predict(
+    video: UploadFile = File(...)
+):
 
-Confianza: {confianza:.0%}
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".webm"
+    ) as temp_video:
 
-Frames totales: {total_frames}
+        content = await video.read()
 
-Frames con mano detectada: {frames_con_mano}
-"""
+        temp_video.write(content)
+
+        temp_path = temp_video.name
+
+    resultado = procesar_video(
+        temp_path
+    )
+
+    os.remove(temp_path)
 
     return resultado
-
-# =========================================================
-# UI
-# =========================================================
-
-with gr.Blocks() as demo:
-
-    gr.Markdown(
-        """
-# Traductor de Señas
-
-Graba una seña corta usando tu webcam y luego presiona "Traducir".
-"""
-    )
-
-    video_input = gr.Video(
-        sources=["webcam"],
-        label="Grabar seña"
-    )
-
-    boton = gr.Button(
-        "Traducir"
-    )
-
-    salida = gr.Markdown()
-
-    boton.click(
-        fn=procesar_video,
-        inputs=video_input,
-        outputs=salida
-    )
-
-# =========================================================
-# Launch
-# =========================================================
-
-if __name__ == "__main__":
-
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=int(
-            os.getenv(
-                "PORT",
-                os.getenv(
-                    "GRADIO_SERVER_PORT",
-                    8080
-                )
-            )
-        ),
-        share=False
-    )
