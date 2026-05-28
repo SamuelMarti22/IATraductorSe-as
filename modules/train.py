@@ -5,10 +5,10 @@ from dataloader import get_dataloaders
 from model import SignLSTM
 
 
-BATCH_SIZE  = 32
-EPOCHS      = 100
+BATCH_SIZE  = 64
+EPOCHS      = 60
 LR          = 1e-3
-HIDDEN_SIZE = 384
+HIDDEN_SIZE = 256
 NUM_LAYERS  = 2
 DROPOUT     = 0.3
 

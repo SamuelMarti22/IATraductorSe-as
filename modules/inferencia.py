@@ -16,8 +16,6 @@ os.environ["EGL_PLATFORM"] = "surfaceless"
 sys.path.insert(0, str(Path(__file__).parent))
 from preprocess.pipeline import HandPipeline
 from model import SignLSTM
-from preprocess.pipeline importnormalizar_landmarks
-
 
 base = Path(__file__).parent.parent
 
@@ -54,6 +52,50 @@ def dibujar_landmarks(frame, landmarks, color_puntos, color_lineas):
     for punto in puntos:
         cv2.circle(frame, punto, 5, color_puntos, -1)
 
+def tiempo_real_gradio(video_path=None):
+    # Si no se proporciona un video, usamos la cámara
+    if video_path is None:
+        cap = cv2.VideoCapture(0)  # Captura desde la cámara
+    else:
+        cap = cv2.VideoCapture(video_path)  # Carga el video proporcionado
+
+    if not cap.isOpened():
+        return None, "No se pudo abrir la cámara o el archivo de video."
+
+    # Crear un archivo temporal para guardar el video procesado
+    tmp = "/tmp/salida_procesada.mp4"  # Ruta fija para depuración
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec más compatible
+    out = cv2.VideoWriter(tmp, fourcc, 20.0, (640, 480))
+
+    while True:
+        success, frame = cap.read()
+        if not success:
+            break
+
+        # Asegúrate de que las dimensiones sean válidas
+        frame = cv2.resize(frame, (640, 480))
+
+        # Convertir el fotograma a RGB para MediaPipe
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+
+        # Detectar landmarks con el pipeline
+        results = pipeline.hands.detect(mp_image)
+
+        # Dibujar puntos fiduciales si se detectan manos
+        if results.hand_landmarks:
+            for mano in results.hand_landmarks:
+                for punto in mano:
+                    x, y = int(punto.x * frame.shape[1]), int(punto.y * frame.shape[0])
+                    cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)  # Puntos verdes
+
+        # Escribir el fotograma procesado en el archivo de video
+        out.write(frame)
+
+    cap.release()
+    out.release()
+
+    return tmp, "Video procesado con puntos fiduciales detectados."
 
 # Cargar modelo y pipeline una sola vez al iniciar
 idx_to_label = cargar_etiquetas(base / "dataset" / "split.csv")
@@ -124,7 +166,7 @@ def predecir(video_path):
 
     # Predecir con el modelo
     secuencia = torch.tensor(np.array(secuencia), dtype=torch.float32)
-    secuencia = normalizar_landmarks(secuencia)
+    secuencia = pipeline.normalizar_landmarks(secuencia)
     secuencia = secuencia.unsqueeze(0)
     mascara   = torch.ones(1, secuencia.shape[1], dtype=torch.bool)
 
@@ -145,15 +187,26 @@ def predecir(video_path):
     return tmp.name, resultado
 
 
+# demo = gr.Interface(
+#     fn=predecir,
+#     inputs=gr.Video(label="Graba tu seña aquí"),
+#     outputs=[
+#         gr.Video(label="Video con landmarks"),
+#         gr.Markdown(label="Predicción"),
+#     ],
+#     title="Traductor de Señas",
+#     description="Graba un gesto con tu mano. Se mostrarán los puntos detectados y la predicción del modelo.",
+# )
+
 demo = gr.Interface(
-    fn=predecir,
-    inputs=gr.Video(label="Graba tu seña aquí"),
+    fn=tiempo_real_gradio,
+    inputs=gr.Video(label="Sube un video o graba uno"),  # Permite subir un video
     outputs=[
-        gr.Video(label="Video con landmarks"),
-        gr.Markdown(label="Predicción"),
+        gr.Video(label="Video con puntos fiduciales"),
+        gr.Markdown(label="Mensaje"),
     ],
-    title="Traductor de Señas",
-    description="Graba un gesto con tu mano. Se mostrarán los puntos detectados y la predicción del modelo.",
+    title="Detección de puntos fiduciales en tiempo real",
+    description="Sube un video o graba uno. Detecta los puntos fiduciales de las manos y muestra el resultado.",
 )
 
 demo.launch(share=True)
