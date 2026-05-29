@@ -1,4 +1,4 @@
-# Traductor de Lengua de Señas con IA
+# IATraductorSe-as
 
 Sistema que detecta gestos de lengua de señas colombiana mediante una cámara y predice en pantalla qué seña se está realizando. Utiliza MediaPipe para extraer landmarks de las manos y un modelo LSTM Bidireccional para clasificar los gestos.
 
