@@ -53,6 +53,10 @@ app.add_middleware(
 
 base = Path(__file__).parent.parent
 
+HIDDEN_SIZE = 384
+NUM_LAYERS  = 2
+DROPOUT     = 0.3
+
 # =========================================================
 # Pipeline
 # =========================================================
@@ -96,10 +100,10 @@ num_classes = len(idx_to_label)
 
 model = SignLSTM(
     input_size=126,
-    hidden_size=256,
-    num_layers=2,
+    hidden_size=HIDDEN_SIZE,
+    num_layers=NUM_LAYERS,
     num_classes=num_classes,
-    dropout=0.0
+    dropout=DROPOUT
 )
 
 model.load_state_dict(
