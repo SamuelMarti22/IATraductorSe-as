@@ -93,24 +93,35 @@ Muestra la accuracy individual de cada uno de los 33 gestos sobre el conjunto de
 ### 5. Demo en tiempo real
 
 **Opción A — Gradio con visualización de landmarks:**
+
 ```bash
 python3 modules/inferencia.py
 ```
 
-**Opción B — Gradio con botón Traducir (puerto 8080):**
+**Opción B — Aplicación web en tiempo real + API REST:**
+
+Para utilizar la versión web en tiempo real, es necesario ejecutar tanto el backend de inferencia como el servidor HTTP encargado de servir el frontend.
+
+1. Ejecutar la API REST:
+
+cd modules
+
 ```bash
-python3 modules/inferencia2.py
-```
-
-Ambas abren una interfaz web donde se puede grabar un gesto con la cámara y ver la predicción del modelo.
-
-### 6. API REST
-
-```bash
+cd modules
 uvicorn modules.inferenciaAPI:app --host 0.0.0.0 --port 8000
 ```
 
-Expone el endpoint `POST /predict` que recibe un archivo de video y retorna un JSON con la predicción:
+2. Ejecutar el frontend:
+3. 
+```bash
+python -m http.server 8081
+```
+
+Posteriormente, se puede acceder a la aplicación web desde el navegador mediante el puerto `8081`. Esta versión captura automáticamente fragmentos cortos de video utilizando la cámara del dispositivo y los envía periódicamente a la API para realizar inferencias en tiempo casi real.
+
+### 6. API REST
+
+La API expone el endpoint `POST /predict`, el cual recibe un archivo de video y retorna un JSON con la predicción realizada por el modelo:
 
 ```json
 {
@@ -122,6 +133,7 @@ Expone el endpoint `POST /predict` que recibe un archivo de video y retorna un J
 ```
 
 ---
+
 
 ## Modelo preentrenado
 
